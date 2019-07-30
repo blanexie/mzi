@@ -5,9 +5,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>xyz.xiezc</groupId>
-    <artifactId>blade</artifactId>
+    <artifactId>mzi</artifactId>
     <version>1.0-SNAPSHOT</version>
-
 
     <properties>
         <blade-mvc.version>2.0.15.ALPHA</blade-mvc.version>
@@ -34,7 +33,7 @@
     </dependencies>
 
     <build>
-        <finalName>blade</finalName>
+        <finalName>mzi</finalName>
         <plugins>
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>

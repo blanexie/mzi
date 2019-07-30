@@ -3,7 +3,10 @@ package xyz.xiezc.mzi.config;
 import io.netty.util.internal.StringUtil;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -14,7 +17,7 @@ import java.util.Set;
 @Slf4j
 public class AbstractResourceReader implements ResourceReader {
     @Override
-    public Set<InputStream> readResources(String packageName, String endWith, boolean recursive) throws FileNotFoundException {
+    public Set<InputStream> readResources(String packageName, String endWith, boolean recursive) {
         Set<InputStream> resourcesByAnnotation = this.getResourcesByAnnotation(packageName, endWith, recursive);
         return resourcesByAnnotation;
     }
@@ -30,7 +33,6 @@ public class AbstractResourceReader implements ResourceReader {
     private Set<File> findResourcesByPackage(final String packageName, final String packagePath,
                                              final String endWith, final boolean recursive) {
         Set<File> resourceSet = new HashSet<>();
-
         // Get the directory of this package to create a File
         File dir = new File(packagePath);
         // If not exist or is not a direct return to the directory
@@ -69,23 +71,23 @@ public class AbstractResourceReader implements ResourceReader {
             // Custom filtering rules If you can loop (include subdirectories) or is the end of the file. Class (compiled java class file)
             return file.listFiles(file1 -> (recursive && file1.isDirectory()));
         }
-        if (!endWith.startsWith(".")) {
+        if (endWith.startsWith(".")) {
             // Custom filtering rules If you can loop (include subdirectories) or is the end of the file. Class (compiled java class file)
             return file.listFiles(file1 -> (recursive && file1.isDirectory()) || (file1.getName().endsWith(endWith)));
         } else {
             // Custom filtering rules If you can loop (include subdirectories) or is the end of the file. Class (compiled java class file)
             return file.listFiles(file1 -> (recursive && file1.isDirectory()) || (file1.getName().endsWith("." + endWith)));
         }
-
     }
 
-    public Set<InputStream> getResourcesByAnnotation(String packageName, final String endWith, boolean recursive) throws FileNotFoundException {
-        Set<File> resourceSet = new HashSet<>();
+    public Set<InputStream> getResourcesByAnnotation(String packageName, final String endWith, boolean recursive) {
+        Set<InputStream> ret = new HashSet<>();
         // Get the name of the package and replace it
         String packageDirName = packageName.replace('.', '/');
         // Defines an enumerated collection and loops to process the URL in this directory
         Enumeration<URL> dirs;
         try {
+            Set<File> resourceSet = new HashSet<>();
             dirs = this.getClass().getClassLoader().getResources(packageDirName);
             // Loop iterations down
             while (dirs.hasMoreElements()) {
@@ -94,13 +96,13 @@ public class AbstractResourceReader implements ResourceReader {
                 Set<File> subResources = findResourcesByPackage(packageName, filePath, endWith, recursive);
                 resourceSet.addAll(subResources);
             }
+            for (File file : resourceSet) {
+                ret.add(new FileInputStream(file));
+            }
         } catch (IOException | URISyntaxException e) {
             log.error(e.getMessage(), e);
         }
-        Set<InputStream> ret = new HashSet<>();
-        for (File file : resourceSet) {
-            ret.add(new FileInputStream(file));
-        }
+
         return ret;
     }
 

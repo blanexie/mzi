@@ -15,31 +15,44 @@ import org.apache.ibatis.parsing.XPathParser;
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
-import org.apache.ibatis.session.SqlSessionFactoryBuilder;
 import org.w3c.dom.Document;
 import org.xml.sax.*;
-import xyz.xiezc.mzi.dao.AlbumMapper;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import java.io.IOException;
 import java.io.InputStream;
-import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Slf4j
 public class MybatisBladeLoader implements BladeLoader {
 
-  EntityResolver entityResolver=   new XMLMapperEntityResolver();
+    EntityResolver entityResolver = new XMLMapperEntityResolver();
 
-  boolean  validation =true;
+    boolean validation = true;
+
     public void init(Blade blade) {
         String mapperPath = getMapperPackage(blade);
         //获取 xyz.xiezc.mzi.dao.xml 接口(集成BaseMapper)的类
         Set<ClassInfo> baseMapperClazz = getBaseMapperClazz(mapperPath);
-        String xmlMapper = blade.env("mybatis.mappers.xml").orElse(mapperPath + ".xml");
+        //获取mapper文件的路径
+        String xmlMapperPath = blade.env("mybatis.mappers").orElse("mapper");
+        ResourceReader resourceReader=null;
+        if(DynamicContext.isJarPackage(xmlMapperPath)){
+            resourceReader=new JarResourcesReaderImpl();
+        }else{
+            resourceReader=new ResourcesReaderImpl();
+        }
+        Set<InputStream> inputStreams = resourceReader.readResources(xmlMapperPath, ".xml", false);
+        for(InputStream inputStream:inputStreams){
+            InputSource inputSource=new InputSource(inputStream);
+            inputSource.setEncoding("utf8");
+            Document document = createDocument(inputSource);
+
+        }
+
+
+
 
 
 
@@ -47,7 +60,7 @@ public class MybatisBladeLoader implements BladeLoader {
         SqlSession session = null;
         String resource = "mybatis-config.xml";
         try (InputStream inputStream = Resources.getResourceAsStream(resource)) {
-            XPathParser xPathParser=  new XPathParser(inputStream, validation, null,entityResolver);
+            XPathParser xPathParser = new XPathParser(inputStream, validation, null, entityResolver);
             XNode xNode = xPathParser.evalNode("/configuration/mappers");
 
 
@@ -55,10 +68,10 @@ public class MybatisBladeLoader implements BladeLoader {
 
 
             Configuration configuration = parser.parse();
+            configuration.addMappers();
 
-
-         //   sqlSessionFactory = new SqlSessionFactoryBuilder().build();
-       //     session = sqlSessionFactory.openSession(true);
+            //   sqlSessionFactory = new SqlSessionFactoryBuilder().build();
+            //     session = sqlSessionFactory.openSession(true);
 //            albumMapper = session.getMapper(AlbumMapper.class);
 //            photoMapper = session.getMapper(PhotoMapper.class);
 //            tagMapper = session.getMapper(TagMapper.class);
@@ -95,7 +108,6 @@ public class MybatisBladeLoader implements BladeLoader {
     }
 
 
-
     private Document createDocument(InputSource inputSource) {
         // important: this must only be called AFTER common constructor
         try {
@@ -130,33 +142,10 @@ public class MybatisBladeLoader implements BladeLoader {
             throw new BuilderException("Error creating document instance.  Cause: " + e, e);
         }
     }
+
     @Override
     public void preLoad(Blade blade) {
-        boolean jarContext = DynamicContext.isJarContext();
-        ResourceReader resourceReader=null;
-        if(jarContext){
-            resourceReader =new JarResourcesReaderImpl();
-
-        }else{
-            resourceReader =new ResourcesReaderImpl();
-
-        }
-        Set<InputStream> resourcesByAnnotation = null;
-        try {
-            resourcesByAnnotation = resourceReader.readResources
-                    ("xyz.xiezc.mzi.dao.xml", ".xml", false);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        for(InputStream inputStream:resourcesByAnnotation){
-
-            log.error(inputStream.toString());
-            try {
-                inputStream.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+        this.init(blade);
 
     }
 

@@ -30,25 +30,24 @@ public class JarResourcesReaderImpl extends AbstractResourceReader {
             while (dirs.hasMoreElements()) {
                 // Next
                 URL url = dirs.nextElement();
-                Set<InputStream> subClasses = this.getClasses(url, endWith);
-                classes.addAll(subClasses);
+                Set<InputStream> subClasses = this.getClasses(packageDirName, url, endWith);
+                if (subClasses.size() > 0) {
+                    classes.addAll(subClasses);
+                }
             }
         } catch (IOException e) {
             log.error(e.getMessage(), e);
         }
         return classes;
+
     }
 
-    private Set<InputStream> getClasses(final URL url, final String endWith
-                                        ) {
-
+    private Set<InputStream> getClasses(final String packageDirName, final URL url, final String endWith) {
         Set<InputStream> set = new HashSet<>();
         try {
             if (url.toString().startsWith(JAR_FILE) || url.toString().startsWith(WSJAR_FILE)) {
-
                 // Get jar file
                 JarFile jarFile = ((JarURLConnection) url.openConnection()).getJarFile();
-
                 // From the jar package to get an enumeration class
                 Enumeration<JarEntry> eje = jarFile.entries();
                 while (eje.hasMoreElements()) {
@@ -56,18 +55,17 @@ public class JarResourcesReaderImpl extends AbstractResourceReader {
                     // such as META-INF and other documents
                     JarEntry entry = eje.nextElement();
                     String name = entry.getName();
-
+                    if (!name.startsWith(packageDirName)) {
+                        continue;
+                    }
                     if (endWith != null && !endWith.equals("")) {
                         // If it is a .class file and not a directory
                         if (!name.endsWith(endWith) || entry.isDirectory()) {
                             continue;
                         }
                     }
-
-                    InputStream resourceAsStream = this.getClass().getResourceAsStream(name);
-
+                    InputStream resourceAsStream = this.getClass().getClassLoader().getResourceAsStream(name);
                     set.add(resourceAsStream);
-
                 }
             }
         } catch (IOException e) {
@@ -75,7 +73,6 @@ public class JarResourcesReaderImpl extends AbstractResourceReader {
         }
         return set;
     }
-
 
 
 }

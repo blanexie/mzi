@@ -22,6 +22,7 @@ import xyz.xiezc.mzi.dao.AlbumMapper;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
@@ -56,11 +57,11 @@ public class MybatisBladeLoader implements BladeLoader {
             Configuration configuration = parser.parse();
 
 
-            sqlSessionFactory = new SqlSessionFactoryBuilder().build();
-            session = sqlSessionFactory.openSession(true);
-            albumMapper = session.getMapper(AlbumMapper.class);
-            photoMapper = session.getMapper(PhotoMapper.class);
-            tagMapper = session.getMapper(TagMapper.class);
+         //   sqlSessionFactory = new SqlSessionFactoryBuilder().build();
+       //     session = sqlSessionFactory.openSession(true);
+//            albumMapper = session.getMapper(AlbumMapper.class);
+//            photoMapper = session.getMapper(PhotoMapper.class);
+//            tagMapper = session.getMapper(TagMapper.class);
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -131,7 +132,32 @@ public class MybatisBladeLoader implements BladeLoader {
     }
     @Override
     public void preLoad(Blade blade) {
-        this.init(blade);
+        boolean jarContext = DynamicContext.isJarContext();
+        ResourceReader resourceReader=null;
+        if(jarContext){
+            resourceReader =new JarResourcesReaderImpl();
+
+        }else{
+            resourceReader =new ResourcesReaderImpl();
+
+        }
+        Set<InputStream> resourcesByAnnotation = null;
+        try {
+            resourcesByAnnotation = resourceReader.readResources
+                    ("xyz.xiezc.mzi.dao.xml", ".xml", false);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        for(InputStream inputStream:resourcesByAnnotation){
+
+            log.error(inputStream.toString());
+            try {
+                inputStream.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
     }
 
     @Override

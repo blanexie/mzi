@@ -12,15 +12,11 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Slf4j
-public class AbstractResourceReader implements ResourceReader{
+public class AbstractResourceReader implements ResourceReader {
     @Override
-    public Set<Reader> readResources(String packageName, String endWith, boolean recursive)  {
-        Set<File> resourcesByAnnotation = this.getResourcesByAnnotation(packageName, endWith, recursive);
-      Set<Reader> ret=new HashSet<>();
-        for(File file:resourcesByAnnotation){
-            ret.add(new FileReader(file));
-        }
-
+    public Set<InputStream> readResources(String packageName, String endWith, boolean recursive) throws FileNotFoundException {
+        Set<InputStream> resourcesByAnnotation = this.getResourcesByAnnotation(packageName, endWith, recursive);
+        return resourcesByAnnotation;
     }
 
     /**
@@ -32,8 +28,8 @@ public class AbstractResourceReader implements ResourceReader{
      * @return
      */
     private Set<File> findResourcesByPackage(final String packageName, final String packagePath,
-                                             final String endWith, final boolean recursive)  {
-        Set<File> resourceSet =new HashSet<>();
+                                             final String endWith, final boolean recursive) {
+        Set<File> resourceSet = new HashSet<>();
 
         // Get the directory of this package to create a File
         File dir = new File(packagePath);
@@ -42,19 +38,19 @@ public class AbstractResourceReader implements ResourceReader{
             log.warn("The package [{}] not found.", packageName);
         }
         // If present, get all the files under the package include the directory
-        File[] dirFiles = accept(dir,endWith, recursive);
+        File[] dirFiles = accept(dir, endWith, recursive);
         // Loop all files
         if (null != dirFiles && dirFiles.length > 0) {
             for (File file : dirFiles) {
                 // If it is a directory, continue scanning
                 if (file.isDirectory()) {
-                     Set<File>   ret=  findResourcesByPackage(packageName + '.' + file.getName(), file.getAbsolutePath(),endWith, recursive);
+                    Set<File> ret = findResourcesByPackage(packageName + '.' + file.getName(), file.getAbsolutePath(), endWith, recursive);
                     resourceSet.addAll(ret);
                 } else {
-                   if( file.exists() && file.canRead()){
-                       resourceSet.add(file);
-                       continue;
-                   }
+                    if (file.exists() && file.canRead()) {
+                        resourceSet.add(file);
+                        continue;
+                    }
                 }
             }
         }
@@ -68,22 +64,22 @@ public class AbstractResourceReader implements ResourceReader{
      * @param recursive
      * @return
      */
-    private File[] accept(File file,final  String endWith, final boolean recursive) {
-        if(StringUtil.isNullOrEmpty(endWith)){
+    private File[] accept(File file, final String endWith, final boolean recursive) {
+        if (StringUtil.isNullOrEmpty(endWith)) {
             // Custom filtering rules If you can loop (include subdirectories) or is the end of the file. Class (compiled java class file)
             return file.listFiles(file1 -> (recursive && file1.isDirectory()));
         }
-        if(!endWith.startsWith(".")){
+        if (!endWith.startsWith(".")) {
             // Custom filtering rules If you can loop (include subdirectories) or is the end of the file. Class (compiled java class file)
             return file.listFiles(file1 -> (recursive && file1.isDirectory()) || (file1.getName().endsWith(endWith)));
-        }else{
+        } else {
             // Custom filtering rules If you can loop (include subdirectories) or is the end of the file. Class (compiled java class file)
-            return file.listFiles(file1 -> (recursive && file1.isDirectory()) || (file1.getName().endsWith("."+endWith)));
+            return file.listFiles(file1 -> (recursive && file1.isDirectory()) || (file1.getName().endsWith("." + endWith)));
         }
 
     }
 
-    public Set<File> getResourcesByAnnotation(String packageName, final String endWith, boolean recursive) {
+    public Set<InputStream> getResourcesByAnnotation(String packageName, final String endWith, boolean recursive) throws FileNotFoundException {
         Set<File> resourceSet = new HashSet<>();
         // Get the name of the package and replace it
         String packageDirName = packageName.replace('.', '/');
@@ -93,15 +89,19 @@ public class AbstractResourceReader implements ResourceReader{
             dirs = this.getClass().getClassLoader().getResources(packageDirName);
             // Loop iterations down
             while (dirs.hasMoreElements()) {
-                URL            url        = dirs.nextElement();
-                String         filePath   = new URI(url.getFile()).getPath();
-                Set<File> subResources = findResourcesByPackage(packageName, filePath,endWith,  recursive);
+                URL url = dirs.nextElement();
+                String filePath = new URI(url.getFile()).getPath();
+                Set<File> subResources = findResourcesByPackage(packageName, filePath, endWith, recursive);
                 resourceSet.addAll(subResources);
             }
         } catch (IOException | URISyntaxException e) {
             log.error(e.getMessage(), e);
         }
-        return resourceSet;
+        Set<InputStream> ret = new HashSet<>();
+        for (File file : resourceSet) {
+            ret.add(new FileInputStream(file));
+        }
+        return ret;
     }
 
 }

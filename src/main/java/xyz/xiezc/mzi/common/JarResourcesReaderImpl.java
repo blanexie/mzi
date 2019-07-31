@@ -1,4 +1,4 @@
-package xyz.xiezc.mzi.config;
+package xyz.xiezc.mzi.common;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.JarURLConnection;
 import java.net.URL;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Set;
@@ -19,8 +21,8 @@ public class JarResourcesReaderImpl extends AbstractResourceReader {
 
 
     @Override
-    public Set<InputStream> getResourcesByAnnotation(String packageName, String endWith, boolean recursive) {
-        Set<InputStream> classes = new HashSet<>();
+    public Set<Path> getResourcesByAnnotation(String packageName, String endWith, boolean recursive) {
+        Set<Path> classes = new HashSet<>();
         // Get the name of the package and replace it
         String packageDirName = packageName.replace('.', '/');
         // Defines an enumerated collection and loops to process the URL in this directory
@@ -30,7 +32,7 @@ public class JarResourcesReaderImpl extends AbstractResourceReader {
             while (dirs.hasMoreElements()) {
                 // Next
                 URL url = dirs.nextElement();
-                Set<InputStream> subClasses = this.getClasses(packageDirName, url, endWith);
+                Set<Path> subClasses = this.getClasses(packageDirName, url, endWith);
                 if (subClasses.size() > 0) {
                     classes.addAll(subClasses);
                 }
@@ -42,8 +44,8 @@ public class JarResourcesReaderImpl extends AbstractResourceReader {
 
     }
 
-    private Set<InputStream> getClasses(final String packageDirName, final URL url, final String endWith) {
-        Set<InputStream> set = new HashSet<>();
+    private Set<Path> getClasses(final String packageDirName, final URL url, final String endWith) {
+        Set<Path> set = new HashSet<>();
         try {
             if (url.toString().startsWith(JAR_FILE) || url.toString().startsWith(WSJAR_FILE)) {
                 // Get jar file
@@ -64,8 +66,8 @@ public class JarResourcesReaderImpl extends AbstractResourceReader {
                             continue;
                         }
                     }
-                    InputStream resourceAsStream = this.getClass().getClassLoader().getResourceAsStream(name);
-                    set.add(resourceAsStream);
+
+                    set.add(Paths.get(name));
                 }
             }
         } catch (IOException e) {

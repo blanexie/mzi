@@ -18,7 +18,7 @@
     </environments>
 
     <mappers>
-        <mapper  resource="mapper/AlbumMapper.xml"/>
+        <mapper resource="mapper/AlbumMapper.xml"/>
         <mapper resource="mapper/PhotoMapper.xml"/>
         <mapper resource="mapper/TagMapper.xml"/>
     </mappers>

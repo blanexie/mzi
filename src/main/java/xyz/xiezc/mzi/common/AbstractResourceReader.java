@@ -1,15 +1,14 @@
-package xyz.xiezc.mzi.config;
+package xyz.xiezc.mzi.common;
 
 import io.netty.util.internal.StringUtil;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Path;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Set;
@@ -17,8 +16,8 @@ import java.util.Set;
 @Slf4j
 public class AbstractResourceReader implements ResourceReader {
     @Override
-    public Set<InputStream> readResources(String packageName, String endWith, boolean recursive) {
-        Set<InputStream> resourcesByAnnotation = this.getResourcesByAnnotation(packageName, endWith, recursive);
+    public Set<Path> readResources(String packageName, String endWith, boolean recursive) {
+        Set<Path> resourcesByAnnotation = this.getResourcesByAnnotation(packageName, endWith, recursive);
         return resourcesByAnnotation;
     }
 
@@ -30,9 +29,9 @@ public class AbstractResourceReader implements ResourceReader {
      * @param recursive
      * @return
      */
-    private Set<File> findResourcesByPackage(final String packageName, final String packagePath,
+    private Set<Path> findResourcesByPackage(final String packageName, final String packagePath,
                                              final String endWith, final boolean recursive) {
-        Set<File> resourceSet = new HashSet<>();
+        Set<Path> resourceSet = new HashSet<>();
         // Get the directory of this package to create a File
         File dir = new File(packagePath);
         // If not exist or is not a direct return to the directory
@@ -46,11 +45,11 @@ public class AbstractResourceReader implements ResourceReader {
             for (File file : dirFiles) {
                 // If it is a directory, continue scanning
                 if (file.isDirectory()) {
-                    Set<File> ret = findResourcesByPackage(packageName + '.' + file.getName(), file.getAbsolutePath(), endWith, recursive);
+                    Set<Path> ret = findResourcesByPackage(packageName + '.' + file.getName(), file.getAbsolutePath(), endWith, recursive);
                     resourceSet.addAll(ret);
                 } else {
                     if (file.exists() && file.canRead()) {
-                        resourceSet.add(file);
+                        resourceSet.add(file.toPath());
                         continue;
                     }
                 }
@@ -80,30 +79,26 @@ public class AbstractResourceReader implements ResourceReader {
         }
     }
 
-    public Set<InputStream> getResourcesByAnnotation(String packageName, final String endWith, boolean recursive) {
-        Set<InputStream> ret = new HashSet<>();
+    public Set<Path> getResourcesByAnnotation(String packageName, final String endWith, boolean recursive) {
+        Set<Path> resourceSet = new HashSet<>();
         // Get the name of the package and replace it
         String packageDirName = packageName.replace('.', '/');
         // Defines an enumerated collection and loops to process the URL in this directory
         Enumeration<URL> dirs;
         try {
-            Set<File> resourceSet = new HashSet<>();
             dirs = this.getClass().getClassLoader().getResources(packageDirName);
             // Loop iterations down
             while (dirs.hasMoreElements()) {
                 URL url = dirs.nextElement();
                 String filePath = new URI(url.getFile()).getPath();
-                Set<File> subResources = findResourcesByPackage(packageName, filePath, endWith, recursive);
+                Set<Path> subResources = findResourcesByPackage(packageName, filePath, endWith, recursive);
                 resourceSet.addAll(subResources);
-            }
-            for (File file : resourceSet) {
-                ret.add(new FileInputStream(file));
             }
         } catch (IOException | URISyntaxException e) {
             log.error(e.getMessage(), e);
         }
 
-        return ret;
+        return resourceSet;
     }
 
 }

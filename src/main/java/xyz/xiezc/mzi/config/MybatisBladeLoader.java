@@ -16,82 +16,127 @@ import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.w3c.dom.Document;
+import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import org.xml.sax.*;
+import xyz.xiezc.mzi.common.*;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathFactory;
+import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Slf4j
 public class MybatisBladeLoader implements BladeLoader {
 
-    EntityResolver entityResolver = new XMLMapperEntityResolver();
+    List<MapperDefine> mapperDefines = new ArrayList<>();
 
-    boolean validation = true;
+    DocumentParse documentParse = new DocumentParse();
 
-    public void init(Blade blade) {
+    public void init(Blade blade) throws IOException {
         String mapperPath = getMapperPackage(blade);
         //获取 xyz.xiezc.mzi.dao.xml 接口(集成BaseMapper)的类
         Set<ClassInfo> baseMapperClazz = getBaseMapperClazz(mapperPath);
         //获取mapper文件的路径
         String xmlMapperPath = blade.env("mybatis.mappers").orElse("mapper");
-        ResourceReader resourceReader=null;
-        if(DynamicContext.isJarPackage(xmlMapperPath)){
-            resourceReader=new JarResourcesReaderImpl();
-        }else{
-            resourceReader=new ResourcesReaderImpl();
+        ResourceReader resourceReader = null;
+        if (DynamicContext.isJarPackage(xmlMapperPath)) {
+            resourceReader = new JarResourcesReaderImpl();
+        } else {
+            resourceReader = new ResourcesReaderImpl();
         }
-        Set<InputStream> inputStreams = resourceReader.readResources(xmlMapperPath, ".xml", false);
-        for(InputStream inputStream:inputStreams){
-            InputSource inputSource=new InputSource(inputStream);
+        //获取所有已经存在的xml
+        Set<Path> paths = resourceReader.readResources(xmlMapperPath, ".xml", false);
+        //过滤文档与接口对应的文档
+        for (Path path : paths) {
+            InputSource inputSource = new InputSource(Files.newBufferedReader(path));
             inputSource.setEncoding("utf8");
-            Document document = createDocument(inputSource);
+            Document document = documentParse.createDocument(inputSource);
+            NodeList mapper = document.getElementsByTagName("mapper");
+            if (mapper.getLength() > 0) {
+                Node node = mapper.item(0);
+                NamedNodeMap attributes = node.getAttributes();
+                String mapperNamespace = attributes.getNamedItem("namespace").getNodeValue();
+                baseMapperClazz = baseMapperClazz.stream()
+                        .filter(m -> {
+                            boolean equals = Objects.equals(m.getClassName(), mapperNamespace);
+                            if (equals) {
+                                MapperDefine mapperDefine = new MapperDefine();
+                                mapperDefine.setMapperClzzInfo(m);
+                                mapperDefine.setDocument(document);
+                                mapperDefines.add(mapperDefine);
+                            }
+                            return !equals;
+                        })
+                        .collect(Collectors.toSet());
+            }
+            //剩下的都是没有文档与之对应的接口
+            baseMapperClazz.stream()
+
+
+
+
+            XPathParser xPathParser = new XPathParser(document);
+
+
+            // XMLConfigBuilder parser = new XMLConfigBuilder(xPathParser, null,null);
+            //TODO
+
+            mapperDefine.setDocument(document);
 
         }
 
 
+//
+//        SqlSessionFactory sqlSessionFactory;
+//        SqlSession session = null;
+//        String resource = "mybatis-config.xml";
+//        try (InputStream inputStream = Resources.getResourceAsStream(resource)) {
+//            XPathParser xPathParser = new XPathParser(inputStream, validation, null, entityResolver);
+//            XNode xNode = xPathParser.evalNode("/configuration/mappers");
+//
+//
+//            XMLConfigBuilder parser = new XMLConfigBuilder(inputStream, null, null);
+//
+//
+//            Configuration configuration = parser.parse();
 
+        // configuration.addMappers();
 
-
-
-        SqlSessionFactory sqlSessionFactory;
-        SqlSession session = null;
-        String resource = "mybatis-config.xml";
-        try (InputStream inputStream = Resources.getResourceAsStream(resource)) {
-            XPathParser xPathParser = new XPathParser(inputStream, validation, null, entityResolver);
-            XNode xNode = xPathParser.evalNode("/configuration/mappers");
-
-
-            XMLConfigBuilder parser = new XMLConfigBuilder(inputStream, null, null);
-
-
-            Configuration configuration = parser.parse();
-            configuration.addMappers();
-
-            //   sqlSessionFactory = new SqlSessionFactoryBuilder().build();
-            //     session = sqlSessionFactory.openSession(true);
+        //   sqlSessionFactory = new SqlSessionFactoryBuilder().build();
+        //     session = sqlSessionFactory.openSession(true);
 //            albumMapper = session.getMapper(AlbumMapper.class);
 //            photoMapper = session.getMapper(PhotoMapper.class);
 //            tagMapper = session.getMapper(TagMapper.class);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
+//        } catch (Exception ex) {
+//            ex.printStackTrace();
+//        }
     }
 
     private Set<ClassInfo> getBaseMapperClazz(String mapperPath) {
         Scanner scanner = Scanner.builder().packageName(mapperPath).recursive(false).build();
         Set<ClassInfo> classInfos = DynamicContext.getClassReader(mapperPath).readClasses(scanner);
 
-        return classInfos.stream().filter(classInfo -> {
-            Class<?> clazz = classInfo.getClazz();
-            if (!clazz.isInterface()) {
-                return false;
-            }
-            return BaseMapper.class.isAssignableFrom(clazz);
+        return classInfos;
 
-        }).collect(Collectors.toSet());
+//        return classInfos.stream().filter(classInfo -> {
+//            Class<?> clazz = classInfo.getClazz();
+//            if (!clazz.isInterface()) {
+//                return false;
+//            }
+//            return BaseMapper.class.isAssignableFrom(clazz);
+//
+//        }).collect(Collectors.toSet());
     }
 
     private String getMapperPackage(Blade blade) {
@@ -108,44 +153,13 @@ public class MybatisBladeLoader implements BladeLoader {
     }
 
 
-    private Document createDocument(InputSource inputSource) {
-        // important: this must only be called AFTER common constructor
-        try {
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            factory.setValidating(validation);
-
-            factory.setNamespaceAware(false);
-            factory.setIgnoringComments(true);
-            factory.setIgnoringElementContentWhitespace(false);
-            factory.setCoalescing(false);
-            factory.setExpandEntityReferences(true);
-
-            DocumentBuilder builder = factory.newDocumentBuilder();
-            builder.setEntityResolver(entityResolver);
-            builder.setErrorHandler(new ErrorHandler() {
-                @Override
-                public void error(SAXParseException exception) throws SAXException {
-                    throw exception;
-                }
-
-                @Override
-                public void fatalError(SAXParseException exception) throws SAXException {
-                    throw exception;
-                }
-
-                @Override
-                public void warning(SAXParseException exception) throws SAXException {
-                }
-            });
-            return builder.parse(inputSource);
-        } catch (Exception e) {
-            throw new BuilderException("Error creating document instance.  Cause: " + e, e);
-        }
-    }
-
     @Override
     public void preLoad(Blade blade) {
-        this.init(blade);
+        try {
+            this.init(blade);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
     }
 

@@ -78,7 +78,7 @@
   <sql id="Base_Column_List">
     id, title, publish_time, `type`, create_time, cover_id, see
   </sql>
-  <select id="selectByExample" parameterType="xyz.xiezc.mzi.entity.Example" resultMap="BaseResultMap">
+  <select id="selectByExample" parameterType="xyz.xiezc.mzi.common.Example" resultMap="BaseResultMap">
     select
     <if test="distinct">
       distinct

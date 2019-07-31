@@ -1,5 +1,7 @@
 package xyz.xiezc.mzi.entity;
 
+import xyz.xiezc.mzi.config.Id;
+
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
@@ -8,6 +10,7 @@ import java.time.LocalDateTime;
  * @author 
  */
 public class Album implements Serializable {
+    @Id
     private Integer id;
 
     private String title;

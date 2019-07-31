@@ -2,11 +2,13 @@ package xyz.xiezc.mzi.common;
 
 import org.apache.ibatis.builder.BuilderException;
 import org.apache.ibatis.builder.xml.XMLMapperEntityResolver;
+import org.apache.ibatis.parsing.PropertyParser;
 import org.w3c.dom.Document;
 import org.xml.sax.*;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import java.util.Properties;
 
 public class DocumentParse {
     EntityResolver entityResolver = new XMLMapperEntityResolver();
@@ -48,4 +50,24 @@ public class DocumentParse {
         }
     }
 
+
+
+
+
+    public static void main(String[] args) {
+
+
+        String x="  select\n" +
+                "        <if test=\"distinct\">\n" +
+                "    ${a}        distinct\n" +
+
+                "        </if>\n" +
+                "        <include refid=\"Base_Column_List\" />\n" +
+                "\n" +
+                "        from ${t_table}";
+        Properties properties=new Properties();
+        properties.setProperty("t_table","xxx");
+        String parse = PropertyParser.parse(x, properties);
+        System.out.println(parse);
+    }
 }

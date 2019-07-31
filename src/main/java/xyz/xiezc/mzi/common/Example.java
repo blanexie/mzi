@@ -1,4 +1,4 @@
-package xyz.xiezc.mzi.entity;
+package xyz.xiezc.mzi.common;
 
 import java.util.ArrayList;
 import java.util.List;

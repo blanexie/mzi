@@ -81,7 +81,7 @@ public class MybatisBladeLoader implements BladeLoader {
                         .collect(Collectors.toSet());
             }
             //剩下的都是没有文档与之对应的接口
-            baseMapperClazz.stream()
+           // baseMapperClazz.stream()
 
 
 
@@ -92,7 +92,7 @@ public class MybatisBladeLoader implements BladeLoader {
             // XMLConfigBuilder parser = new XMLConfigBuilder(xPathParser, null,null);
             //TODO
 
-            mapperDefine.setDocument(document);
+        //    mapperDefine.setDocument(document);
 
         }
 

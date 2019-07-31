@@ -1,7 +1,7 @@
 package xyz.xiezc.mzi.config;
 
 import org.apache.ibatis.annotations.Param;
-import xyz.xiezc.mzi.entity.Example;
+import xyz.xiezc.mzi.common.Example;
 
 import java.util.List;
 

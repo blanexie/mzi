@@ -61,6 +61,7 @@ public class MybatisBladeLoader implements BladeLoader {
         for (Path path : paths) {
             InputSource inputSource = new InputSource(Files.newBufferedReader(path));
             inputSource.setEncoding("utf8");
+
             Document document = documentParse.createDocument(inputSource);
             NodeList mapper = document.getElementsByTagName("mapper");
             if (mapper.getLength() > 0) {
@@ -72,7 +73,7 @@ public class MybatisBladeLoader implements BladeLoader {
                             boolean equals = Objects.equals(m.getClassName(), mapperNamespace);
                             if (equals) {
                                 MapperDefine mapperDefine = new MapperDefine();
-                                mapperDefine.setMapperClzzInfo(m);
+                                mapperDefine.setMapperInterface(m.getClazz());
                                 mapperDefine.setDocument(document);
                                 mapperDefines.add(mapperDefine);
                             }
@@ -81,8 +82,7 @@ public class MybatisBladeLoader implements BladeLoader {
                         .collect(Collectors.toSet());
             }
             //剩下的都是没有文档与之对应的接口
-           // baseMapperClazz.stream()
-
+            baseMapperClazz.stream();
 
 
 

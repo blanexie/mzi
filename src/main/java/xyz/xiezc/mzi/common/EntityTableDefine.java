@@ -11,9 +11,8 @@ import java.util.Set;
 public class EntityTableDefine {
 
 
-
-  private  ColumnProp table;
-  private  ColumnProp id;
+    private ColumnProp table;
+    private ColumnProp id;
     private Set<ColumnProp> columns;
 
 
@@ -23,6 +22,7 @@ public class EntityTableDefine {
     public static class ColumnProp {
         Class<?> clazz;
         String column;
+        String property;
     }
 
 }

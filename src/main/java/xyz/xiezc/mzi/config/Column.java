@@ -12,4 +12,10 @@ public @interface Column {
 
     String value() default "";
 
+    /**
+     * 是否对应数据库中字段, 默认true 对应
+     * @return
+     */
+    boolean exist() default true;
+
 }

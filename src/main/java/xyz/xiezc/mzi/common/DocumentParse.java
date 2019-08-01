@@ -10,6 +10,7 @@ import org.w3c.dom.Text;
 import org.xml.sax.*;
 import xyz.xiezc.mzi.dao.AlbumMapper;
 
+import javax.print.Doc;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.util.Properties;
@@ -115,20 +116,25 @@ public class DocumentParse {
     }
 
 
-    public void createMapper() {
+    public Element createMapper() {
 
-        EntityTableDefine entityTableDefine = mapperDefine.getEntityTableDefine();
 
         Document doc = mapperDefine.getDocument();
 
         Element mapper = doc.createElement("mapper");
         mapper.setAttribute("namespace", mapperDefine.getMapperInterface().getName());
 
+        return mapper;
+
+
+    }
+
+    public Element createResultMap() {
+        Document doc = mapperDefine.getDocument();
+        EntityTableDefine entityTableDefine = mapperDefine.getEntityTableDefine();
         Element resultMap = doc.createElement("resultMap");
         resultMap.setAttribute("id", "BaseResultMap");
         resultMap.setAttribute("type", "xyz.xiezc.mzi.entity.Album");
-        mapper.appendChild(resultMap);
-
         Element id = doc.createElement("id");
 
         //   column="id" jdbcType="INTEGER" property="id" />
@@ -142,6 +148,11 @@ public class DocumentParse {
             result.setAttribute("column", columnProp.getColumn());
             result.setAttribute("property", columnProp.getProperty());
         }
+        return resultMap;
+    }
+
+    public Element createSql() {
+        Document doc = mapperDefine.getDocument();
         Element sql = doc.createElement("sql");
         sql.setAttribute("id", "XZCExample_Where_Clause");
         Element where = doc.createElement("where");
@@ -156,45 +167,47 @@ public class DocumentParse {
         anIf.setAttribute("test", "criteria.valid");
         Element trim = doc.createElement("trim");
         anIf.appendChild(trim);
-        trim.setAttribute( "prefix","(");
-        trim.setAttribute( "prefixOverrides","and");
-        trim.setAttribute( "suffix",")");
+        trim.setAttribute("prefix", "(");
+        trim.setAttribute("prefixOverrides", "and");
+        trim.setAttribute("suffix", ")");
         Element foreach1 = doc.createElement("foreach");
         trim.appendChild(foreach1);
-        foreach1.setAttribute("collection","criteria.criteria");
-        foreach1.setAttribute("item","criterion");
+        foreach1.setAttribute("collection", "criteria.criteria");
+        foreach1.setAttribute("item", "criterion");
         Element choose = doc.createElement("choose");
         foreach1.appendChild(choose);
         Element when = doc.createElement("when");
         choose.appendChild(when);
-        when.setAttribute( "test","criterion.noValue");
+        when.setAttribute("test", "criterion.noValue");
         Text textNode = doc.createTextNode("and ${criterion.condition}");
         when.appendChild(textNode);
+
         Element when1 = doc.createElement("when");
-        when1.setAttribute("test","criterion.singleValue");
-        when1.appendChild(doc.createTextNode("  and ${criterion.condition} #{criterion.value}"))       ;
+        choose.appendChild(when1);
+        when1.setAttribute("test", "criterion.singleValue");
+        when1.appendChild(doc.createTextNode("  and ${criterion.condition} #{criterion.value}"));
+
+        Element when2 = doc.createElement("when");
+        choose.appendChild(when2);
+        when2.setAttribute("test", "riterion.betweenValue");
+        when2.appendChild(doc.createTextNode("    and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}"));
 
 
+        Element when3 = doc.createElement("when");
+        choose.appendChild(when3);
+        when3.setAttribute("test", "criterion.listValue");
+        when3.appendChild(doc.createTextNode("    and ${criterion.condition}"));
 
-                                <when test="criterion.betweenValue">
-                and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
-                                </when>
-                                <when test="criterion.listValue">
-                and ${criterion.condition}
-                                    <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
-                                        #{listItem}
-                                    </foreach>
-                                </when>
-                            </choose>
+        Element foreach2 = doc.createElement("foreach");
+        when3.appendChild(foreach2);
+        foreach2.setAttribute("close", ")");
+        foreach2.setAttribute("collection", "criterion.value");
+        foreach2.setAttribute("item", "listItem");
 
-
-    }
-
-
-    public void createResultMap() {
-        Node mapper = mapperDefine.getDocument().getElementsByTagName("mapper").item(0);
-
-
+        foreach2.setAttribute("separator", ",");
+        foreach2.setAttribute("open", "(");
+        foreach2.appendChild(doc.createTextNode("   #{listItem}"));
+        return sql;
     }
 
 

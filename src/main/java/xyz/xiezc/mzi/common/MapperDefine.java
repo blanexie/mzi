@@ -72,7 +72,7 @@ public class MapperDefine {
 
 
     public void dealEntityClazzFiled() {
-        EntityTableDefine entityTableDefine = new EntityTableDefine();
+         entityTableDefine = new EntityTableDefine();
         //表名
         Table table = this.entityClazz.getAnnotation(Table.class);
         String tableName;

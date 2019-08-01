@@ -11,6 +11,8 @@ import java.util.Set;
 public class EntityTableDefine {
 
 
+
+public static final String ExampleName="xyz.xiezc.mzi.common.Example";
     private ColumnProp table;
     private ColumnProp id;
     private Set<ColumnProp> columns;

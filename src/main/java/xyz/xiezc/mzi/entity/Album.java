@@ -1,9 +1,7 @@
 package xyz.xiezc.mzi.entity;
 
 import lombok.Data;
-import xyz.xiezc.mzi.config.Column;
-import xyz.xiezc.mzi.config.Id;
-import xyz.xiezc.mzi.config.Table;
+import xyz.xiezc.mzi.common.annotation.Table;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;

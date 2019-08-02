@@ -1,4 +1,4 @@
-package xyz.xiezc.mzi.common;
+package xyz.xiezc.mzi.common.resourceReader;
 
 import java.nio.file.Path;
 import java.util.Set;

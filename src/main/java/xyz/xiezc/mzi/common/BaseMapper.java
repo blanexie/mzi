@@ -1,4 +1,4 @@
-package xyz.xiezc.mzi.config;
+package xyz.xiezc.mzi.common;
 
 import org.apache.ibatis.annotations.Param;
 import xyz.xiezc.mzi.common.Example;

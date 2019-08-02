@@ -1,4 +1,4 @@
-package xyz.xiezc.mzi.config;
+package xyz.xiezc.mzi.common.annotation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

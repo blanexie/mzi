@@ -1,6 +1,6 @@
 package xyz.xiezc.mzi.dao;
 
-import xyz.xiezc.mzi.config.BaseMapper;
+import xyz.xiezc.mzi.common.BaseMapper;
 import xyz.xiezc.mzi.entity.Album;
 
 /**

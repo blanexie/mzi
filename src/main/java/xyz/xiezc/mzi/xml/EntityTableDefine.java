@@ -1,4 +1,4 @@
-package xyz.xiezc.mzi.common;
+package xyz.xiezc.mzi.xml;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;

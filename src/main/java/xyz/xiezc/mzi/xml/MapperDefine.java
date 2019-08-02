@@ -1,12 +1,16 @@
-package xyz.xiezc.mzi.common;
+package xyz.xiezc.mzi.xml;
 
-import com.blade.ioc.bean.ClassInfo;
 import lombok.Data;
-import org.w3c.dom.Document;
-import xyz.xiezc.mzi.config.BaseMapper;
-import xyz.xiezc.mzi.config.Column;
-import xyz.xiezc.mzi.config.Id;
-import xyz.xiezc.mzi.config.Table;
+import lombok.NoArgsConstructor;
+import org.apache.ibatis.io.ClassLoaderWrapper;
+import org.apache.ibatis.javassist.tools.reflect.Reflection;
+import org.apache.ibatis.reflection.Reflector;
+import org.apache.ibatis.reflection.TypeParameterResolver;
+import xyz.xiezc.mzi.common.StringUtil;
+import xyz.xiezc.mzi.common.BaseMapper;
+import xyz.xiezc.mzi.common.annotation.Column;
+import xyz.xiezc.mzi.common.annotation.Id;
+import xyz.xiezc.mzi.common.annotation.Table;
 import xyz.xiezc.mzi.entity.Album;
 
 import java.lang.reflect.Field;
@@ -19,13 +23,16 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Data
+@NoArgsConstructor
 public class MapperDefine {
 
     /**
      * 关联的实体对象类
      */
     Class<?> entityClazz;
-
+    /**
+     * 实体对象与表对应关系
+     */
     EntityTableDefine entityTableDefine;
 
     /**
@@ -33,19 +40,14 @@ public class MapperDefine {
      */
     Class<?> mapperInterface;
 
-    /**
-     * 关联的对应maper.xml文件
-     */
-    Document document;
-
-    /**
-     * 对应mapper.xml的名称
-     */
-    String xmlFileName;
 
 
-    public void init(Class<?> mapperInterface){
-        this.mapperInterface=mapperInterface;
+    public MapperDefine(Class<?> mapperInterface) {
+        this.init(mapperInterface);
+    }
+
+    private void init(Class<?> mapperInterface) {
+        this.mapperInterface = mapperInterface;
         this.dealEntityClazz();
         this.dealEntityClazzFiled();
     }
@@ -72,7 +74,7 @@ public class MapperDefine {
 
 
     public void dealEntityClazzFiled() {
-         entityTableDefine = new EntityTableDefine();
+        entityTableDefine = new EntityTableDefine();
         //表名
         Table table = this.entityClazz.getAnnotation(Table.class);
         String tableName;
@@ -87,6 +89,8 @@ public class MapperDefine {
         entityTableDefine.getTable().setClazz(this.entityClazz);
         entityTableDefine.getTable().setProperty(this.entityClazz.getSimpleName());
 
+
+
         Field[] declaredFields = this.entityClazz.getDeclaredFields();
         //搜索出id, 如果搜不出来, 后面默认搜索字段名等于id的字段作为主键id
         List<Field> fields = Arrays.asList(declaredFields);
@@ -99,7 +103,7 @@ public class MapperDefine {
                         return false;
                     }
                     Column column = field.getAnnotation(Column.class);
-                    return column==null||column.exist();
+                    return column == null || column.exist();
                 })
                 .filter(field -> {
                     Id id = field.getAnnotation(Id.class);

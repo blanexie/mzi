@@ -1,137 +1,307 @@
-package xyz.xiezc.mzi.common;
+package xyz.xiezc.mzi.xml;
 
+import lombok.Data;
 import org.apache.ibatis.builder.BuilderException;
 import org.apache.ibatis.builder.xml.XMLMapperEntityResolver;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Text;
+import org.w3c.dom.*;
 import org.xml.sax.*;
-import xyz.xiezc.mzi.dao.AlbumMapper;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.*;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
-public class DocumentParse {
+@Data
+public class DocumentMapperDefine {
     EntityResolver entityResolver = new XMLMapperEntityResolver();
     boolean validation = true;
+
     MapperDefine mapperDefine;
 
-    public DocumentParse(MapperDefine mapperDefine, InputSource inputSource) {
-        Document document = this.createDocument(inputSource);
-        mapperDefine.setDocument(document);
+    Document document;
+
+    String nameSpace;
+
+    Path path;
+
+    boolean hasCheckDoc = false;
+
+    public DocumentMapperDefine(MapperDefine mapperDefine, Path path) throws IOException {
+        InputSource inputSource = new InputSource(Files.newBufferedReader(path));
+        try {
+            this.path = path;
+            inputSource.setEncoding("utf8");
+            this.mapperDefine = mapperDefine;
+            document = this.createDocument(inputSource);
+            nameSpace = getNameSpace();
+            if (!Objects.equals(nameSpace, mapperDefine.getMapperInterface().getName())) {
+                throw new RuntimeException("文档与mapper接口不对应");
+            }
+        } finally {
+            inputSource.getCharacterStream().close();
+        }
+    }
+
+    public DocumentMapperDefine(Path path) throws IOException {
+        InputSource inputSource = new InputSource(Files.newBufferedReader(path));
+        try {
+            this.path = path;
+            inputSource.setEncoding("utf8");
+            document = this.createDocument(inputSource);
+            nameSpace = getNameSpace();
+        } finally {
+            inputSource.getCharacterStream().close();
+        }
+    }
+
+    public DocumentMapperDefine(MapperDefine mapperDefine) {
         this.mapperDefine = mapperDefine;
+        document = this.createDocument();
+        nameSpace = mapperDefine.getMapperInterface().getName();
+        this.hasCheckDoc = true;
     }
 
-    public DocumentParse(MapperDefine mapperDefine) {
-        Document document = this.createDocument();
-        mapperDefine.setDocument(document);
-        this.mapperDefine = mapperDefine;
+
+    /**
+     * 通过解析文档, 获取文档对应的mapper接口
+     *
+     * @return
+     */
+    public String getNameSpace() {
+        NodeList mapper = document.getElementsByTagName("mapper");
+        if (mapper.getLength() > 0) {
+            Node node = mapper.item(0);
+            NamedNodeMap attributes = node.getAttributes();
+            return attributes.getNamedItem("namespace").getNodeValue();
+        }
+        return null;
     }
 
-    public DocumentParse() {
+    public void checkDoc() {
+        if (hasCheckDoc) {
+            writeDoc();
+            return;
+        }
+        Element mapper = document.getDocumentElement();
+        checkResultMap(mapper);
+        checkSql(mapper);
+        checkSelect(mapper);
+        checkUpdate(mapper);
+        checkDelete(mapper);
+        checkInsert(mapper);
+        hasCheckDoc = true;
+        writeDoc();
+    }
+
+    private void checkInsert(Element mapper) {
+        NodeList inserts = mapper.getElementsByTagName("insert");
+        List<String> insertIds = new ArrayList<>();
+        insertIds.add("insert");
+        insertIds.add("insertSelective");
+
+        checkById(inserts, insertIds);
+
+
+        if (insertIds.contains("insert")) {
+            mapper.appendChild(this.createInsert());
+        }
+        if (insertIds.contains("insertSelective")) {
+            mapper.appendChild(this.createInsertSelective());
+        }
+
 
     }
 
-    public Document createDocument(InputSource inputSource) {
+    private void checkDelete(Element mapper) {
+        NodeList deletes = mapper.getElementsByTagName("delete");
+
+        List<String> deleteIds = new ArrayList<>();
+        deleteIds.add("deleteByPrimaryKey");
+        deleteIds.add("deleteByExample");
+        checkById(deletes, deleteIds);
+
+        if (deleteIds.contains("deleteByExample")) {
+            mapper.appendChild(this.createDeleteByExample());
+        }
+        if (deleteIds.contains("deleteByPrimaryKey")) {
+            mapper.appendChild(this.createDeleteByPrimaryKey());
+        }
+    }
+
+
+    private void checkUpdate(Element mapper) {
+        NodeList updates = mapper.getElementsByTagName("update");
+
+        List<String> updateIds = new ArrayList<>();
+        updateIds.add("updateByPrimaryKey");
+        updateIds.add("updateByPrimaryKeySelective");
+        updateIds.add("updateByExample");
+        updateIds.add("updateByExampleSelective");
+
+        checkById(updates, updateIds);
+
+
+        if (updateIds.contains("updateByPrimaryKey")) {
+            mapper.appendChild(this.createUpdateByPrimaryKey());
+        }
+        if (updateIds.contains("updateByPrimaryKeySelective")) {
+            mapper.appendChild(this.createUpdateByPrimaryKeySelective());
+        }
+        if (updateIds.contains("updateByExample")) {
+            mapper.appendChild(this.createUpdateByExample());
+        }
+        if (updateIds.contains("updateByExampleSelective")) {
+            mapper.appendChild(this.createUpdateByExampleSelective());
+        }
+
+    }
+
+
+    private void checkSelect(Element mapper) {
+        NodeList selects = mapper.getElementsByTagName("select");
+
+        List<String> selectIds = new ArrayList<>();
+        selectIds.add("selectByPrimaryKey");
+        selectIds.add("countByExample");
+        selectIds.add("selectByExample");
+        checkById(selects, selectIds);
+        if (selectIds.contains("selectByPrimaryKey")) {
+            mapper.appendChild(this.createSelectByPrimaryKey());
+        }
+        if (selectIds.contains("countByExample")) {
+            mapper.appendChild(this.createCountByExample());
+        }
+        if (selectIds.contains("selectByExample")) {
+            mapper.appendChild(this.createSelectByExample());
+        }
+
+    }
+
+    private void checkById(NodeList selects, List<String> selectIds) {
+        int length = selects.getLength();
+        for (int i = 0; i < length; i++) {
+            Node sql = selects.item(i);
+            Node id = sql.getAttributes().getNamedItem("id");
+            if (id == null) {
+                continue;
+            }
+            selectIds.remove(id.getNodeValue());
+
+        }
+    }
+
+
+    private void checkSql(Element mapper) {
+        NodeList sqls = mapper.getElementsByTagName("sql");
+
+        List<String> sqlStr = new ArrayList<>();
+        sqlStr.add("XZCBase_Column_List");
+        sqlStr.add("Update_By_XZCExample_Where_Clause");
+        sqlStr.add("XZCExample_Where_Clause");
+
+        checkById(sqls, sqlStr);
+
+        if (sqlStr.contains("XZCBase_Column_List")) {
+            mapper.appendChild(this.createAllColumnSql());
+        }
+        if (sqlStr.contains("XZCExample_Where_Clause")) {
+            mapper.appendChild(this.createWhereSql());
+        }
+        if (sqlStr.contains("Update_By_XZCExample_Where_Clause")) {
+            mapper.appendChild(this.createUpdateWhereSql());
+        }
+    }
+
+    private void checkResultMap(Element mapper) {
+        NodeList resultMaps = mapper.getElementsByTagName("resultMap");
+        int length = resultMaps.getLength();
+        for (int i = 0; i < length; i++) {
+            Node resultMap = resultMaps.item(i);
+            Node xzcBaseResultMap = resultMap.getAttributes().getNamedItem("XZCBaseResultMap");
+            if (xzcBaseResultMap != null) {
+                return;
+            }
+        }
+        mapper.appendChild(this.createResultMap());
+    }
+
+
+    private Document createDocument(InputSource inputSource) {
         // important: this must only be called AFTER common constructor
         try {
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            factory.setValidating(validation);
-
-            factory.setNamespaceAware(false);
-            factory.setIgnoringComments(true);
-            factory.setIgnoringElementContentWhitespace(false);
-            factory.setCoalescing(false);
-            factory.setExpandEntityReferences(true);
-
-            DocumentBuilder builder = factory.newDocumentBuilder();
-            builder.setEntityResolver(entityResolver);
-            builder.setErrorHandler(new ErrorHandler() {
-                @Override
-                public void error(SAXParseException exception) throws SAXException {
-                    throw exception;
-                }
-
-                @Override
-                public void fatalError(SAXParseException exception) throws SAXException {
-                    throw exception;
-                }
-
-                @Override
-                public void warning(SAXParseException exception) throws SAXException {
-                }
-            });
+            DocumentBuilder builder = getDocumentBuilder();
             return builder.parse(inputSource);
         } catch (Exception e) {
             throw new BuilderException("Error creating document instance.  Cause: " + e, e);
         }
     }
 
+    private DocumentBuilder getDocumentBuilder() throws ParserConfigurationException {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        factory.setValidating(validation);
 
-    public Document createDocument() {
-        // important: this must only be called AFTER common constructor
+        factory.setNamespaceAware(false);
+        factory.setIgnoringComments(true);
+        factory.setIgnoringElementContentWhitespace(false);
+        factory.setCoalescing(false);
+        factory.setExpandEntityReferences(true);
+
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        builder.setEntityResolver(entityResolver);
+        builder.setErrorHandler(new ErrorHandler() {
+            @Override
+            public void error(SAXParseException exception) throws SAXException {
+                throw exception;
+            }
+
+            @Override
+            public void fatalError(SAXParseException exception) throws SAXException {
+                throw exception;
+            }
+
+            @Override
+            public void warning(SAXParseException exception) throws SAXException {
+            }
+        });
+        return builder;
+    }
+
+
+    private Document createDocument() {
         try {
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            factory.setValidating(validation);
-
-            factory.setNamespaceAware(false);
-            factory.setIgnoringComments(true);
-            factory.setIgnoringElementContentWhitespace(false);
-            factory.setCoalescing(false);
-            factory.setExpandEntityReferences(true);
-
-            DocumentBuilder builder = factory.newDocumentBuilder();
-            builder.setEntityResolver(entityResolver);
-            builder.setErrorHandler(new ErrorHandler() {
-                @Override
-                public void error(SAXParseException exception) throws SAXException {
-                    throw exception;
-                }
-
-                @Override
-                public void fatalError(SAXParseException exception) throws SAXException {
-                    throw exception;
-                }
-
-                @Override
-                public void warning(SAXParseException exception) throws SAXException {
-                }
-            });
-            return builder.newDocument();
-
+            DocumentBuilder builder = getDocumentBuilder();
+            document = builder.newDocument();
+            this.createMapperXml();
+            return document;
         } catch (Exception e) {
             throw new BuilderException("Error creating document instance.  Cause: " + e, e);
         }
     }
 
 
-    public Element createMapper() {
-
-
-        Document doc = mapperDefine.getDocument();
-
+    private Element createMapper() {
+        Document doc = document;
         Element mapper = doc.createElement("mapper");
         mapper.setAttribute("namespace", mapperDefine.getMapperInterface().getName());
-
         return mapper;
-
-
     }
 
-    public Element createResultMap() {
-        Document doc = mapperDefine.getDocument();
+    private Element createResultMap() {
+        Document doc = document;
         EntityTableDefine entityTableDefine = mapperDefine.getEntityTableDefine();
         Element resultMap = doc.createElement("resultMap");
-        resultMap.setAttribute("id", "BaseResultMap");
-        resultMap.setAttribute("type", "xyz.xiezc.mzi.entity.Album");
+        resultMap.setAttribute("id", "XZCBaseResultMap");
+        resultMap.setAttribute("type", entityTableDefine.getTable().getClazz().getName());
         Element id = doc.createElement("id");
 
         //   column="id" jdbcType="INTEGER" property="id" />
@@ -149,8 +319,8 @@ public class DocumentParse {
         return resultMap;
     }
 
-    public Element createUpdateByPrimaryKey() {
-        Document doc = mapperDefine.getDocument();
+    private Element createUpdateByPrimaryKey() {
+        Document doc = document;
         EntityTableDefine entityTableDefine = mapperDefine.getEntityTableDefine();
         Element update = doc.createElement("update");
         update.setAttribute("id", "updateByPrimaryKey");
@@ -168,8 +338,8 @@ public class DocumentParse {
         return update;
     }
 
-    public Element createUpdateByPrimaryKeySelective() {
-        Document doc = mapperDefine.getDocument();
+    private Element createUpdateByPrimaryKeySelective() {
+        Document doc = document;
         EntityTableDefine entityTableDefine = mapperDefine.getEntityTableDefine();
         Element update = doc.createElement("update");
         update.setAttribute("id", "updateByPrimaryKeySelective");
@@ -190,8 +360,8 @@ public class DocumentParse {
         return update;
     }
 
-    public Element createUpdateByExample() {
-        Document doc = mapperDefine.getDocument();
+    private Element createUpdateByExample() {
+        Document doc = document;
         EntityTableDefine entityTableDefine = mapperDefine.getEntityTableDefine();
         Element update = doc.createElement("update");
         update.setAttribute("id", "updateByExample");
@@ -215,8 +385,8 @@ public class DocumentParse {
         return update;
     }
 
-    public Element createUpdateByExampleSelective() {
-        Document doc = mapperDefine.getDocument();
+    private Element createUpdateByExampleSelective() {
+        Document doc = document;
         EntityTableDefine entityTableDefine = mapperDefine.getEntityTableDefine();
         Element update = doc.createElement("update");
         update.setAttribute("id", "updateByExampleSelective");
@@ -244,9 +414,9 @@ public class DocumentParse {
         return update;
     }
 
-    public Element createCountByExample() {
+    private Element createCountByExample() {
         EntityTableDefine entityTableDefine = mapperDefine.getEntityTableDefine();
-        Document doc = mapperDefine.getDocument();
+        Document doc = document;
         Element select = doc.createElement("select");
         select.setAttribute("id", "countByExample");
         select.setAttribute("parameterType", EntityTableDefine.ExampleName);
@@ -257,14 +427,14 @@ public class DocumentParse {
         anIf.setAttribute("test", "_parameter != null");
         Element include = doc.createElement("include");
         anIf.appendChild(include);
-        include.setAttribute("refid", "Example_Where_Clause");
+        include.setAttribute("refid", "XZCExample_Where_Clause");
         return select;
 
     }
 
-    public Element createInsertSelective() {
+    private Element createInsertSelective() {
         EntityTableDefine entityTableDefine = mapperDefine.getEntityTableDefine();
-        Document doc = mapperDefine.getDocument();
+        Document doc = document;
         Element insert = doc.createElement("insert");
         insert.setAttribute("id", "insertSelective");
         insert.setAttribute("keyColumn", entityTableDefine.getId().getColumn());
@@ -299,9 +469,9 @@ public class DocumentParse {
     }
 
 
-    public Element createInsert() {
+    private Element createInsert() {
         EntityTableDefine entityTableDefine = mapperDefine.getEntityTableDefine();
-        Document doc = mapperDefine.getDocument();
+        Document doc = document;
         Element insert = doc.createElement("insert");
         insert.setAttribute("id", "insert");
         insert.setAttribute("keyColumn", entityTableDefine.getId().getColumn());
@@ -310,9 +480,9 @@ public class DocumentParse {
         insert.setAttribute("useGeneratedKeys", "true");
         StringBuffer stringBuffer = new StringBuffer();
 //
-//    EntityTableDefine.ColumnProp id = entityTableDefine.getId();
-//    stringBuffer.append(id.getColumn());
-        stringBuffer.append("  insert into t_album (");
+        stringBuffer.append("  insert into ")
+                .append(entityTableDefine.getTable().getColumn())
+                .append(" (");
         Set<EntityTableDefine.ColumnProp> columns = entityTableDefine.getColumns();
         for (EntityTableDefine.ColumnProp columnProp : columns) {
             stringBuffer.append(columnProp.getColumn()).append(",");
@@ -328,10 +498,10 @@ public class DocumentParse {
 
     }
 
-    public Element createDeleteByExample() {
+    private Element createDeleteByExample() {
         EntityTableDefine entityTableDefine = mapperDefine.getEntityTableDefine();
-        Document doc = mapperDefine.getDocument();
-        Element select = doc.createElement("select");
+        Document doc = document;
+        Element select = doc.createElement("delete");
         select.setAttribute("id", "deleteByExample");
         select.setAttribute("parameterType", EntityTableDefine.ExampleName);
         select.appendChild(doc.createTextNode("  delete from " + entityTableDefine.getTable().getColumn()));
@@ -344,10 +514,10 @@ public class DocumentParse {
         return select;
     }
 
-    public Element createDeleteByPrimaryKey() {
+    private Element createDeleteByPrimaryKey() {
         EntityTableDefine entityTableDefine = mapperDefine.getEntityTableDefine();
-        Document doc = mapperDefine.getDocument();
-        Element select = doc.createElement("select");
+        Document doc = document;
+        Element select = doc.createElement("delete");
         select.setAttribute("id", "deleteByPrimaryKey");
         select.setAttribute("parameterType", entityTableDefine.getId().getClazz().getName());
         select.appendChild(doc.createTextNode("delete from " + entityTableDefine.getTable().getColumn()));
@@ -355,9 +525,9 @@ public class DocumentParse {
         return select;
     }
 
-    public Element createSelectByPrimaryKey() {
+    private Element createSelectByPrimaryKey() {
         EntityTableDefine entityTableDefine = mapperDefine.getEntityTableDefine();
-        Document doc = mapperDefine.getDocument();
+        Document doc = document;
         Element select = doc.createElement("select");
         select.setAttribute("id", "selectByPrimaryKey");
         select.setAttribute("parameterType", entityTableDefine.getId().getClazz().getName());
@@ -371,9 +541,9 @@ public class DocumentParse {
         return select;
     }
 
-    public Element createSelectByExample() {
+    private Element createSelectByExample() {
         EntityTableDefine entityTableDefine = mapperDefine.getEntityTableDefine();
-        Document doc = mapperDefine.getDocument();
+        Document doc = document;
         Element select = doc.createElement("select");
         select.setAttribute("id", "selectByExample");
         select.setAttribute("parameterType", EntityTableDefine.ExampleName);
@@ -415,8 +585,8 @@ public class DocumentParse {
     }
 
 
-    public Element createAllColumnSql() {
-        Document doc = mapperDefine.getDocument();
+    private Element createAllColumnSql() {
+        Document doc = document;
         Element sql = doc.createElement("sql");
         sql.setAttribute("id", "XZCBase_Column_List");
         EntityTableDefine entityTableDefine = mapperDefine.getEntityTableDefine();
@@ -431,8 +601,8 @@ public class DocumentParse {
         return sql;
     }
 
-    public Element createUpdateWhereSql() {
-        Document doc = mapperDefine.getDocument();
+    private Element createUpdateWhereSql() {
+        Document doc = document;
         Element sql = doc.createElement("sql");
         sql.setAttribute("id", "Update_By_XZCExample_Where_Clause");
         Element where = doc.createElement("where");
@@ -483,8 +653,8 @@ public class DocumentParse {
         return sql;
     }
 
-    public Element createWhereSql() {
-        Document doc = mapperDefine.getDocument();
+    private Element createWhereSql() {
+        Document doc = document;
         Element sql = doc.createElement("sql");
         sql.setAttribute("id", "XZCExample_Where_Clause");
         Element where = doc.createElement("where");
@@ -543,42 +713,50 @@ public class DocumentParse {
     }
 
 
-    public static void main(String[] args) throws TransformerException {
-        MapperDefine mapperDefine = new MapperDefine();
-        mapperDefine.init(AlbumMapper.class);
-        DocumentParse documentParse = new DocumentParse(mapperDefine);
+    private void createMapperXml() {
 
-        Document doc = mapperDefine.getDocument();
         // 添加根节点
-        Element mapper = documentParse.createMapper();
-        mapper.appendChild(documentParse.createResultMap());
-        mapper.appendChild(documentParse.createWhereSql());
-        mapper.appendChild(documentParse.createUpdateWhereSql());
-        mapper.appendChild(documentParse.createAllColumnSql());
-        mapper.appendChild(documentParse.createSelectByExample());
-        mapper.appendChild(documentParse.createSelectByPrimaryKey());
-        mapper.appendChild(documentParse.createDeleteByPrimaryKey());
-        mapper.appendChild(documentParse.createDeleteByExample());
-        mapper.appendChild(documentParse.createInsert());
-        mapper.appendChild(documentParse.createInsertSelective());
-        mapper.appendChild(documentParse.createCountByExample());
-        mapper.appendChild(documentParse.createUpdateByExampleSelective());
-        mapper.appendChild(documentParse.createUpdateByExample());
-        mapper.appendChild(documentParse.createUpdateByPrimaryKeySelective());
-        mapper.appendChild(documentParse.createUpdateByPrimaryKey());
+        Element mapper = this.createMapper();
+        mapper.appendChild(this.createResultMap());
+        mapper.appendChild(this.createWhereSql());
+        mapper.appendChild(this.createUpdateWhereSql());
+        mapper.appendChild(this.createAllColumnSql());
+        mapper.appendChild(this.createSelectByExample());
+        mapper.appendChild(this.createSelectByPrimaryKey());
+        mapper.appendChild(this.createDeleteByPrimaryKey());
+        mapper.appendChild(this.createDeleteByExample());
+        mapper.appendChild(this.createInsert());
+        mapper.appendChild(this.createInsertSelective());
+        mapper.appendChild(this.createCountByExample());
+        mapper.appendChild(this.createUpdateByExampleSelective());
+        mapper.appendChild(this.createUpdateByExample());
+        mapper.appendChild(this.createUpdateByPrimaryKeySelective());
+        mapper.appendChild(this.createUpdateByPrimaryKey());
 
-        doc.appendChild(mapper);
+        document.appendChild(mapper);
 
+
+    }
+
+    private void writeDoc() {
         // 把xml内容输出到具体的文件中
         TransformerFactory formerFactory = TransformerFactory.newInstance();
-        Transformer transformer = formerFactory.newTransformer();
+        Transformer transformer = null;
+        try {
+            transformer = formerFactory.newTransformer();
+        } catch (TransformerConfigurationException e) {
+            e.printStackTrace();
+        }
         // 换行
         transformer.setOutputProperty(OutputKeys.INDENT, "YES");
         // 文档字符编码
         transformer.setOutputProperty(OutputKeys.ENCODING, "utf-8");
-
+        String simpleName = this.mapperDefine.getMapperInterface().getSimpleName();
         // 可随意指定文件的后缀,效果一样,但xml比较好解析,比如: E:\\person.txt等
-        transformer.transform(new DOMSource(doc), new StreamResult(new File("C:\\Users\\86187\\Desktop\\src\\AlbumMapper.xml")));
-
+        try {
+            transformer.transform(new DOMSource(document), new StreamResult(new File(simpleName + ".xml")));
+        } catch (TransformerException e) {
+            e.printStackTrace();
+        }
     }
 }

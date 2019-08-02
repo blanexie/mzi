@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<mapper namespace="xyz.xiezc.mzi.dao.TagMapper">
+<resultMap id="XZCBaseResultMap" type="xyz.xiezc.mzi.entity.Tag">
+<id column="id" property="id"/>
+<result column="create_time" property="createTime"/>
+<result column="name" property="name"/>
+</resultMap>
+<sql id="XZCExample_Where_Clause">
+<where>
+<foreach collection="oredCriteria" item="criteria" separator="or">
+<if test="criteria.valid">
+<trim prefix="(" prefixOverrides="and" suffix=")">
+<foreach collection="criteria.criteria" item="criterion">
+<choose>
+<when test="criterion.noValue">and ${criterion.condition}</when>
+<when test="criterion.singleValue">  and ${criterion.condition} #{criterion.value}</when>
+<when test="riterion.betweenValue">    and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}</when>
+<when test="criterion.listValue">    and ${criterion.condition}<foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">   #{listItem}</foreach>
+</when>
+</choose>
+</foreach>
+</trim>
+</if>
+</foreach>
+</where>
+</sql>
+<sql id="Update_By_XZCExample_Where_Clause">
+<where>
+<foreach collection="example.oredCriteria" item="criteria" separator="or">
+<if test="criteria.valid">
+<trim prefix="(" prefixOverrides="and" suffix=")">
+<foreach collection="criteria.criteria" item="criterion">
+<choose>
+<when test="criterion.noValue">and ${criterion.condition}</when>
+<when test="criterion.singleValue">and ${criterion.condition} #{criterion.value}</when>
+<when test="criterion.betweenValue">and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}</when>
+<when test="criterion.listValue">and ${criterion.condition}<foreach close=")" collection="criterion.value" item="listItem" open="(" separator=","> #{listItem}</foreach>
+</when>
+</choose>
+</foreach>
+</trim>
+</if>
+</foreach>
+</where>
+</sql>
+<sql id="XZCBase_Column_List">id,create_time,name</sql>
+<select id="selectByExample" parameterType="xyz.xiezc.mzi.common.Example" resultMap="XZCBaseResultMap">select<if test="distinct">distinct</if>
+<include refid="XZCBase_Column_List"/> from t_tag<if test="_parameter != null">
+<include refid="XZCExample_Where_Clause"/>
+</if>
+<if test="orderByClause != null"> order by ${orderByClause}</if>
+<if test="limit != null">
+<if test="offset != null">  limit ${offset}, ${limit}</if>
+<if test="offset == null">  limit ${limit}</if>
+</if>
+</select>
+<select id="selectByPrimaryKey" parameterType="java.lang.Integer" resultMap="XZCBaseResultMap">select<include refid="XZCBase_Column_List"/> from t_tag   whereid = #{id}</select>
+<delete id="deleteByPrimaryKey" parameterType="java.lang.Integer">delete from t_tagwhere id= #{id}</delete>
+<delete id="deleteByExample" parameterType="xyz.xiezc.mzi.common.Example">  delete from t_tag<if test="_parameter != null">
+<include refid="XZCExample_Where_Clause"/>
+</if>
+</delete>
+<insert id="insert" keyColumn="id" keyProperty="id" parameterType="xyz.xiezc.mzi.entity.Tag" useGeneratedKeys="true">  insert into t_tag (create_time,name )   values (#{createTime},#{name} )</insert>
+<insert id="insertSelective" keyColumn="id" keyProperty="id" parameterType="xyz.xiezc.mzi.entity.Tag" useGeneratedKeys="true"> insert into t_tag<trim prefix="(" suffix=")" suffixOverrides=",">
+<if test="createTime != null">create_time</if>
+<if test="name != null">name</if>
+</trim>
+<trim prefix="values (" suffix=")" suffixOverrides=",">
+<if test="createTime != null">   #{createTime},</if>
+<if test="name != null">   #{name},</if>
+</trim>
+</insert>
+<select id="countByExample" parameterType="xyz.xiezc.mzi.common.Example" resultType="java.lang.Long"> select count(*) from t_tag<if test="_parameter != null">
+<include refid="XZCExample_Where_Clause"/>
+</if>
+</select>
+<update id="updateByExampleSelective" parameterType="map">update t_tag<set>
+<if test="record.id != null">id= #{record.id},</if>
+<if test="record.createTime != null">create_time= #{record.createTime},</if>
+<if test="record.name != null">name= #{record.name},</if>
+<if test="_parameter  != null">
+<include refid="Update_By_XZCExample_Where_Clause"/>
+</if>
+</set>
+</update>
+<update id="updateByExample" parameterType="map"> update t_tag<if test="_parameter != null">
+<include refid="Update_By_XZCExample_Where_Clause"/>
+</if>
+</update>
+<update id="updateByPrimaryKeySelective" parameterType="xyz.xiezc.mzi.entity.Tag"> update t_tag<set>
+<if test="createTime != null">create_time = #{createTime},</if>
+<if test="name != null">name = #{name},</if>
+</set>where id= #{id}</update>
+<update id="updateByPrimaryKey" parameterType="xyz.xiezc.mzi.entity.Tag"> update t_tag set create_time=#{createTime},name=#{name}, where id = #{id}</update>
+</mapper>

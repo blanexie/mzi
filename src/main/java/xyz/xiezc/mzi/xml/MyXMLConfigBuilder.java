@@ -1,4 +1,4 @@
-package xyz.xiezc.mzi.config;
+package xyz.xiezc.mzi.xml;
 
 import org.apache.ibatis.builder.BaseBuilder;
 import org.apache.ibatis.builder.BuilderException;

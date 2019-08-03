@@ -2,13 +2,11 @@ package xyz.xiezc.mzi.xml;
 
 import lombok.Data;
 import org.apache.ibatis.builder.BuilderException;
-import org.apache.ibatis.builder.xml.XMLMapperEntityResolver;
 import org.w3c.dom.*;
-import org.xml.sax.*;
+import org.xml.sax.InputSource;
+import xyz.xiezc.mzi.common.DocumentUtil;
 
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.*;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
@@ -23,7 +21,6 @@ import java.util.Set;
 
 @Data
 public class DocumentMapperDefine {
-    EntityResolver entityResolver = new XMLMapperEntityResolver();
     boolean validation = true;
 
     MapperDefine mapperDefine;
@@ -111,15 +108,12 @@ public class DocumentMapperDefine {
 
         checkById(inserts, insertIds);
 
-
         if (insertIds.contains("insert")) {
             mapper.appendChild(this.createInsert());
         }
         if (insertIds.contains("insertSelective")) {
             mapper.appendChild(this.createInsertSelective());
         }
-
-
     }
 
     private void checkDelete(Element mapper) {
@@ -149,8 +143,6 @@ public class DocumentMapperDefine {
         updateIds.add("updateByExampleSelective");
 
         checkById(updates, updateIds);
-
-
         if (updateIds.contains("updateByPrimaryKey")) {
             mapper.appendChild(this.createUpdateByPrimaryKey());
         }
@@ -239,47 +231,17 @@ public class DocumentMapperDefine {
     private Document createDocument(InputSource inputSource) {
         // important: this must only be called AFTER common constructor
         try {
-            DocumentBuilder builder = getDocumentBuilder();
+            DocumentBuilder builder = DocumentUtil.getDocumentBuilder(validation);
             return builder.parse(inputSource);
         } catch (Exception e) {
             throw new BuilderException("Error creating document instance.  Cause: " + e, e);
         }
     }
 
-    private DocumentBuilder getDocumentBuilder() throws ParserConfigurationException {
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        factory.setValidating(validation);
-
-        factory.setNamespaceAware(false);
-        factory.setIgnoringComments(true);
-        factory.setIgnoringElementContentWhitespace(false);
-        factory.setCoalescing(false);
-        factory.setExpandEntityReferences(true);
-
-        DocumentBuilder builder = factory.newDocumentBuilder();
-        builder.setEntityResolver(entityResolver);
-        builder.setErrorHandler(new ErrorHandler() {
-            @Override
-            public void error(SAXParseException exception) throws SAXException {
-                throw exception;
-            }
-
-            @Override
-            public void fatalError(SAXParseException exception) throws SAXException {
-                throw exception;
-            }
-
-            @Override
-            public void warning(SAXParseException exception) throws SAXException {
-            }
-        });
-        return builder;
-    }
-
 
     private Document createDocument() {
         try {
-            DocumentBuilder builder = getDocumentBuilder();
+            DocumentBuilder builder = DocumentUtil.getDocumentBuilder(validation);
             document = builder.newDocument();
             this.createMapperXml();
             return document;

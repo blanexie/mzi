@@ -1,7 +1,10 @@
 package xyz.xiezc.mzi.common;
 
 public class StringUtil {
- 
+
+	public static boolean isNullOrEmpty(String s) {
+		return s == null || s.isEmpty();
+	}
 	/**
 	 * 驼峰转换为下划线
 	 * 

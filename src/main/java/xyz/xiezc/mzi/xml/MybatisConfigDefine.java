@@ -10,18 +10,22 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 import xyz.xiezc.mzi.common.DocumentUtil;
+import xyz.xiezc.mzi.common.StringUtil;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Objects;
-import java.util.Properties;
+import java.util.*;
 
 public class MybatisConfigDefine {
     @Setter
     @Getter
     Document configDocument;
+    @Setter
+    @Getter
+    List<DocumentMapperDefine> mapperDefines;
+
 
     @Setter
     @Getter
@@ -34,7 +38,6 @@ public class MybatisConfigDefine {
 
     public void checkMybatisConfig() throws ParserConfigurationException, IOException, SAXException {
         Properties properties = blade.environment().props();
-
         DocumentBuilder documentBuilder = DocumentUtil.getDocumentBuilder(true);
         InputStream resourceAsStream = Resources.getResourceAsStream(properties.getProperty("mybatis.config"));
         configDocument = documentBuilder.parse(resourceAsStream);
@@ -43,9 +46,28 @@ public class MybatisConfigDefine {
         checkMappers();
     }
 
+    /**
+     * 更新配置， 之后就可以正常的mybatis进程
+     */
+    public void dealMappers() {
+        NodeList mappers1 = configDocument.getElementsByTagName("mappers");
+        int length = mappers1.getLength();
+        for (int i = 0; i < length; i++) {
+            Node item = mappers1.item(i);
+            item.getParentNode().removeChild(item);
+        }
+        Element mappers = configDocument.createElement("mappers");
+        configDocument.getDocumentElement().appendChild(mappers);
+        for (DocumentMapperDefine documentMapperDefine : mapperDefines) {
+            Element mapper1 = configDocument.createElement("mapper");
+            mapper1.setAttribute("resource", documentMapperDefine.getNameSpace().replaceAll("\\.", "/"));
+            mappers.appendChild(mapper1);
+        }
+    }
+
 
     private void checkMappers() {
-        StringBuffer stringBuffer = new StringBuffer();
+        Set<String> paths = new HashSet<>();
         //如果用户配置了
         NodeList mappers = configDocument.getElementsByTagName("mappers");
         int length = mappers.getLength();
@@ -61,21 +83,29 @@ public class MybatisConfigDefine {
         for (int i = 0; i < length1; i++) {
             Node item1 = childNodes.item(i);
             String nodeName = item1.getNodeName();
+            if (Objects.equals("#text", nodeName)) {
+                continue;
+            }
             if (Objects.equals(nodeName, "mapper")) {
                 Node resource = item1.getAttributes().getNamedItem("resource");
                 String nodeValue = resource.getNodeValue();
                 int i1 = nodeValue.lastIndexOf("/");
                 String substring = nodeValue.substring(0, i1);
-                stringBuffer.append(substring).append(",");
+                paths.add(substring);
             }
             if (Objects.equals(nodeName, "package")) {
                 //还有url和class属性
                 //TODO
                 Node nameNode = item1.getAttributes().getNamedItem("name");
                 String nodeValue = nameNode.getNodeValue();
-                stringBuffer.append(nodeValue.replaceAll(".", "/")).append(",");
+                paths.add(nodeValue.replaceAll("\\.", "/"));
             }
         }
+        StringBuffer stringBuffer = new StringBuffer();
+        for (String s : paths) {
+            stringBuffer.append(s).append(",");
+        }
+        stringBuffer.deleteCharAt(stringBuffer.length() - 1);
         blade.environment().add("mybatis.mappers.xml.config", stringBuffer.toString());
     }
 
@@ -98,7 +128,7 @@ public class MybatisConfigDefine {
 
         Node item = environments.item(0);
         Node development = item.getAttributes().getNamedItem("default");
-        if (development != null && Objects.equals(development.getNodeValue(), envName)) {
+        if (StringUtil.isNullOrEmpty(envName) || Objects.equals(development.getNodeValue(), envName)) {
             return;
         } else {
             Element environments1 = (Element) item;

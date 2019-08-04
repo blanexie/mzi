@@ -86,7 +86,6 @@ public class DocumentMapperDefine {
 
     public void checkDoc() {
         if (hasCheckDoc) {
-            writeDoc();
             return;
         }
         Element mapper = document.getDocumentElement();
@@ -97,7 +96,6 @@ public class DocumentMapperDefine {
         checkDelete(mapper);
         checkInsert(mapper);
         hasCheckDoc = true;
-        writeDoc();
     }
 
     private void checkInsert(Element mapper) {
@@ -295,7 +293,7 @@ public class DocumentMapperDefine {
             stringBuffer.append(columnProp.getColumn()).append("=#{")
                     .append(columnProp.getProperty()).append("},");
         }
-        stringBuffer.append(" where " + entityTableDefine.getId().getColumn() + " = #{" + entityTableDefine.getId().getProperty() + "}");
+        stringBuffer.append(" where " + entityTableDefine.getId().getColumn() + " = #{" + entityTableDefine.getId().getProperty() + " } ");
         update.appendChild(doc.createTextNode(stringBuffer.toString()));
         return update;
     }
@@ -318,7 +316,7 @@ public class DocumentMapperDefine {
             anIf.appendChild(doc.createTextNode(columnProp.getColumn() + " = #{" + columnProp.getProperty() + "},"));
         }
 
-        update.appendChild(doc.createTextNode("where " + entityTableDefine.getId().getColumn() + "= #{" + entityTableDefine.getId().getProperty() + "}"));
+        update.appendChild(doc.createTextNode(" where " + entityTableDefine.getId().getColumn() + "= #{" + entityTableDefine.getId().getProperty() + "}"));
         return update;
     }
 
@@ -353,7 +351,7 @@ public class DocumentMapperDefine {
         Element update = doc.createElement("update");
         update.setAttribute("id", "updateByExampleSelective");
         update.setAttribute("parameterType", "map");
-        update.appendChild(doc.createTextNode("update " + entityTableDefine.getTable().getColumn()));
+        update.appendChild(doc.createTextNode(" update " + entityTableDefine.getTable().getColumn()));
         Element set = doc.createElement("set");
         update.appendChild(set);
         Set<EntityTableDefine.ColumnProp> columns = entityTableDefine.getColumns();
@@ -425,7 +423,7 @@ public class DocumentMapperDefine {
             Element anIf = doc.createElement("if");
             trim1.appendChild(anIf);
             anIf.setAttribute("test", columnProp.getProperty() + " != null");
-            anIf.appendChild(doc.createTextNode("   #{" + columnProp.getProperty() + "},"));
+            anIf.appendChild(doc.createTextNode(" #{" + columnProp.getProperty() + "},"));
         }
         return insert;
     }
@@ -482,8 +480,8 @@ public class DocumentMapperDefine {
         Element select = doc.createElement("delete");
         select.setAttribute("id", "deleteByPrimaryKey");
         select.setAttribute("parameterType", entityTableDefine.getId().getClazz().getName());
-        select.appendChild(doc.createTextNode("delete from " + entityTableDefine.getTable().getColumn()));
-        select.appendChild(doc.createTextNode("where " + entityTableDefine.getId().getColumn() + "= #{" + entityTableDefine.getId().getProperty() + "}"));
+        select.appendChild(doc.createTextNode(" delete from " + entityTableDefine.getTable().getColumn()));
+        select.appendChild(doc.createTextNode(" where " + entityTableDefine.getId().getColumn() + "= #{" + entityTableDefine.getId().getProperty() + "}"));
         return select;
     }
 
@@ -494,12 +492,12 @@ public class DocumentMapperDefine {
         select.setAttribute("id", "selectByPrimaryKey");
         select.setAttribute("parameterType", entityTableDefine.getId().getClazz().getName());
         select.setAttribute("resultMap", "XZCBaseResultMap");
-        select.appendChild(doc.createTextNode("select"));
+        select.appendChild(doc.createTextNode(" select "));
         Element include = doc.createElement("include");
         select.appendChild(include);
         include.setAttribute("refid", "XZCBase_Column_List");
         select.appendChild(doc.createTextNode(" from " + entityTableDefine.getTable().getColumn() +
-                "   where" + entityTableDefine.getId().getColumn() + " = #{" + entityTableDefine.getId().getProperty() + "}"));
+                "   where " + entityTableDefine.getId().getColumn() + " = #{" + entityTableDefine.getId().getProperty() + "}"));
         return select;
     }
 
@@ -510,11 +508,11 @@ public class DocumentMapperDefine {
         select.setAttribute("id", "selectByExample");
         select.setAttribute("parameterType", EntityTableDefine.ExampleName);
         select.setAttribute("resultMap", "XZCBaseResultMap");
-        select.appendChild(doc.createTextNode("select"));
+        select.appendChild(doc.createTextNode(" select "));
         Element anIf = doc.createElement("if");
         anIf.setAttribute("test", "distinct");
         select.appendChild(anIf);
-        anIf.appendChild(doc.createTextNode("distinct"));
+        anIf.appendChild(doc.createTextNode(" distinct "));
         Element include = doc.createElement("include");
         select.appendChild(include);
         include.setAttribute("refid", "XZCBase_Column_List");
@@ -530,7 +528,7 @@ public class DocumentMapperDefine {
         Element anIf2 = doc.createElement("if");
         select.appendChild(anIf2);
         anIf2.setAttribute("test", "orderByClause != null");
-        anIf2.appendChild(doc.createTextNode(" order by ${orderByClause}"));
+        anIf2.appendChild(doc.createTextNode(" order by ${orderByClause} "));
 
         Element anIf3 = doc.createElement("if");
         select.appendChild(anIf3);
@@ -538,11 +536,11 @@ public class DocumentMapperDefine {
         Element anIf4 = doc.createElement("if");
         anIf3.appendChild(anIf4);
         anIf4.setAttribute("test", "offset != null");
-        anIf4.appendChild(doc.createTextNode("  limit ${offset}, ${limit}"));
+        anIf4.appendChild(doc.createTextNode(" limit ${offset}, ${limit} "));
         Element anIf5 = doc.createElement("if");
         anIf3.appendChild(anIf5);
         anIf5.setAttribute("test", "offset == null");
-        anIf5.appendChild(doc.createTextNode("  limit ${limit}"));
+        anIf5.appendChild(doc.createTextNode(" limit ${limit} "));
         return select;
     }
 
@@ -553,11 +551,11 @@ public class DocumentMapperDefine {
         sql.setAttribute("id", "XZCBase_Column_List");
         EntityTableDefine entityTableDefine = mapperDefine.getEntityTableDefine();
         StringBuffer stringBuffer = new StringBuffer();
-        stringBuffer.append(entityTableDefine.getId().getColumn());
+        stringBuffer.append(" ").append(entityTableDefine.getId().getColumn()).append(" ");
         Set<EntityTableDefine.ColumnProp> columns = entityTableDefine.getColumns();
         for (EntityTableDefine.ColumnProp columnProp : columns) {
             stringBuffer.append(",");
-            stringBuffer.append(columnProp.getColumn());
+            stringBuffer.append(" ").append(columnProp.getColumn()).append(" ");
         }
         sql.appendChild(doc.createTextNode(stringBuffer.toString()));
         return sql;
@@ -591,19 +589,19 @@ public class DocumentMapperDefine {
         Element when = doc.createElement("when");
         choose.appendChild(when);
         when.setAttribute("test", "criterion.noValue");
-        when.appendChild(doc.createTextNode("and ${criterion.condition}"));
+        when.appendChild(doc.createTextNode(" and ${criterion.condition} "));
         Element when1 = doc.createElement("when");
         choose.appendChild(when1);
         when1.setAttribute("test", "criterion.singleValue");
-        when1.appendChild(doc.createTextNode("and ${criterion.condition} #{criterion.value}"));
+        when1.appendChild(doc.createTextNode(" and ${criterion.condition} #{criterion.value} "));
         Element when2 = doc.createElement("when");
         choose.appendChild(when2);
         when2.setAttribute("test", "criterion.betweenValue");
-        when2.appendChild(doc.createTextNode("and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}"));
+        when2.appendChild(doc.createTextNode(" and ${criterion.condition} #{criterion.value} and #{criterion.secondValue} "));
         Element when3 = doc.createElement("when");
         choose.appendChild(when3);
         when3.setAttribute("test", "criterion.listValue");
-        when3.appendChild(doc.createTextNode("and ${criterion.condition}"));
+        when3.appendChild(doc.createTextNode(" and ${criterion.condition} "));
         Element foreach2 = doc.createElement("foreach");
         when3.appendChild(foreach2);
         foreach2.setAttribute("close", ")");
@@ -611,7 +609,7 @@ public class DocumentMapperDefine {
         foreach2.setAttribute("item", "listItem");
         foreach2.setAttribute("open", "(");
         foreach2.setAttribute("separator", ",");
-        foreach2.appendChild(doc.createTextNode(" #{listItem}"));
+        foreach2.appendChild(doc.createTextNode(" #{listItem} "));
         return sql;
     }
 
@@ -643,24 +641,24 @@ public class DocumentMapperDefine {
         Element when = doc.createElement("when");
         choose.appendChild(when);
         when.setAttribute("test", "criterion.noValue");
-        Text textNode = doc.createTextNode("and ${criterion.condition}");
+        Text textNode = doc.createTextNode(" and ${criterion.condition} ");
         when.appendChild(textNode);
 
         Element when1 = doc.createElement("when");
         choose.appendChild(when1);
         when1.setAttribute("test", "criterion.singleValue");
-        when1.appendChild(doc.createTextNode("  and ${criterion.condition} #{criterion.value}"));
+        when1.appendChild(doc.createTextNode(" and ${criterion.condition} #{criterion.value} "));
 
         Element when2 = doc.createElement("when");
         choose.appendChild(when2);
         when2.setAttribute("test", "riterion.betweenValue");
-        when2.appendChild(doc.createTextNode("    and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}"));
+        when2.appendChild(doc.createTextNode(" and ${criterion.condition} #{criterion.value} and #{criterion.secondValue} "));
 
 
         Element when3 = doc.createElement("when");
         choose.appendChild(when3);
         when3.setAttribute("test", "criterion.listValue");
-        when3.appendChild(doc.createTextNode("    and ${criterion.condition}"));
+        when3.appendChild(doc.createTextNode(" and ${criterion.condition} "));
 
         Element foreach2 = doc.createElement("foreach");
         when3.appendChild(foreach2);
@@ -670,7 +668,7 @@ public class DocumentMapperDefine {
 
         foreach2.setAttribute("separator", ",");
         foreach2.setAttribute("open", "(");
-        foreach2.appendChild(doc.createTextNode("   #{listItem}"));
+        foreach2.appendChild(doc.createTextNode("   #{listItem} "));
         return sql;
     }
 
@@ -700,25 +698,5 @@ public class DocumentMapperDefine {
 
     }
 
-    private void writeDoc() {
-        // 把xml内容输出到具体的文件中
-        TransformerFactory formerFactory = TransformerFactory.newInstance();
-        Transformer transformer = null;
-        try {
-            transformer = formerFactory.newTransformer();
-        } catch (TransformerConfigurationException e) {
-            e.printStackTrace();
-        }
-        // 换行
-        transformer.setOutputProperty(OutputKeys.INDENT, "YES");
-        // 文档字符编码
-        transformer.setOutputProperty(OutputKeys.ENCODING, "utf-8");
-        String simpleName = this.mapperDefine.getMapperInterface().getSimpleName();
-        // 可随意指定文件的后缀,效果一样,但xml比较好解析,比如: E:\\person.txt等
-        try {
-            transformer.transform(new DOMSource(document), new StreamResult(new File(simpleName + ".xml")));
-        } catch (TransformerException e) {
-            e.printStackTrace();
-        }
-    }
+
 }

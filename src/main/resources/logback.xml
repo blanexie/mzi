@@ -47,6 +47,7 @@
             <pattern>[%-5level] [%d{MM-dd HH:mm:ss.SSS}] [%thread] %logger{15}.%method{10} - %msg%n</pattern>
         </encoder>
     </appender>
+    <logger name="xyz.xiezc.mzi.dao" level="DEBUG" />
 
     <root>
         <level value="Debug"/>

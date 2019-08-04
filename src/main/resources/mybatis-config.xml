@@ -8,20 +8,14 @@
     <environments default="development">
         <environment id="development">
             <transactionManager type="JDBC"/>
-            <dataSource type="DRUID">
-                <property name="driver" value="${driver}"/>
-                <property name="url" value="${url}"/>
-                <property name="username" value="${username}"/>
-                <property name="password" value="${password}"/>
+            <dataSource type="xyz.xiezc.mzi.common.MziDataSourceFactory">
+                <property name="driver" value="${mybatis.driver}"/>
+                <property name="url" value="${mybatis.url}"/>
+                <property name="username" value="${mybatis.username}"/>
+                <property name="password" value="${mybatis.password}"/>
             </dataSource>
         </environment>
     </environments>
 
-    <mappers>
-        <mapper resource="mapper/AlbumMapper.xml"/>
-        <mapper resource="mapper/PhotoMapper.xml"/>
-        <mapper resource="mapper/TagMapper.xml"/>
-        <package name="com.xiezc.mzi.dao"/>
-    </mappers>
 
 </configuration>

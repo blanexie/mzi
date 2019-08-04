@@ -6,8 +6,14 @@ import com.blade.ioc.annotation.Bean;
 import com.blade.loader.BladeLoader;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.io.ResolverUtil;
+import org.apache.ibatis.parsing.XPathParser;
+import org.apache.ibatis.session.SqlSession;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.apache.ibatis.session.SqlSessionFactoryBuilder;
+import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 import xyz.xiezc.mzi.common.BaseMapper;
+import xyz.xiezc.mzi.common.DocumentUtil;
 import xyz.xiezc.mzi.common.StringUtil;
 import xyz.xiezc.mzi.common.annotation.MapperScan;
 import xyz.xiezc.mzi.common.resourceReader.JarResourcesReaderImpl;
@@ -15,6 +21,7 @@ import xyz.xiezc.mzi.common.resourceReader.ResourceReader;
 import xyz.xiezc.mzi.common.resourceReader.ResourcesReaderImpl;
 import xyz.xiezc.mzi.xml.DocumentMapperDefine;
 import xyz.xiezc.mzi.xml.MapperDefine;
+import xyz.xiezc.mzi.xml.MyXMLConfigBuilder;
 import xyz.xiezc.mzi.xml.MybatisConfigDefine;
 
 import javax.xml.parsers.ParserConfigurationException;
@@ -28,6 +35,9 @@ import java.util.stream.Collectors;
 @Slf4j
 @Bean
 public class MybatisBladeLoader implements BladeLoader {
+
+    List<DocumentMapperDefine> documentPars;
+
     /**
      * 处理mapper 接口和mapper.xml配置文件
      *
@@ -38,7 +48,7 @@ public class MybatisBladeLoader implements BladeLoader {
         Set<Class<?>> baseMapperClazz = getBaseMapperClazz(blade);
         //获取mapper文件的路径
         Set<Path> paths = getMapperXmlPath(blade);
-        List<DocumentMapperDefine> documentPars = paths.stream()
+        documentPars = paths.stream()
                 .map(path -> {
                     try {
                         return new DocumentMapperDefine(path);
@@ -135,10 +145,19 @@ public class MybatisBladeLoader implements BladeLoader {
             //解析mapper 文件
             this.dealMapperXml(blade);
             //更正配置文件
-
-
-
+            mybatisConfigDefine.setMapperDefines(this.documentPars);
+            mybatisConfigDefine.dealMappers();
+            Document configDocument = mybatisConfigDefine.getConfigDocument();
+            DocumentUtil.writeDoc(configDocument);
             //启动mybatis配置
+            MyXMLConfigBuilder myXMLConfigBuilder = new MyXMLConfigBuilder(new XPathParser(configDocument), null, null);
+            myXMLConfigBuilder.setDocumentMapperDefines(documentPars);
+            SqlSessionFactory build = new SqlSessionFactoryBuilder().build(myXMLConfigBuilder.parse());
+            SqlSession sqlSession = build.openSession(true);
+            for (DocumentMapperDefine documentMapperDefine : documentPars) {
+                Object mapper = sqlSession.getMapper(documentMapperDefine.getMapperDefine().getMapperInterface());
+                blade.ioc().addBean(mapper);
+            }
         } catch (ParserConfigurationException e) {
             e.printStackTrace();
         } catch (IOException e) {

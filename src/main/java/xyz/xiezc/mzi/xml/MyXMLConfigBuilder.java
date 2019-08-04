@@ -1,6 +1,5 @@
 package xyz.xiezc.mzi.xml;
 
-import com.alibaba.druid.util.StringUtils;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.ibatis.builder.BaseBuilder;
@@ -15,7 +14,6 @@ import org.apache.ibatis.io.VFS;
 import org.apache.ibatis.logging.Log;
 import org.apache.ibatis.mapping.DatabaseIdProvider;
 import org.apache.ibatis.mapping.Environment;
-import org.apache.ibatis.parsing.ParsingException;
 import org.apache.ibatis.parsing.XNode;
 import org.apache.ibatis.parsing.XPathParser;
 import org.apache.ibatis.plugin.Interceptor;
@@ -27,26 +25,20 @@ import org.apache.ibatis.reflection.wrapper.ObjectWrapperFactory;
 import org.apache.ibatis.session.*;
 import org.apache.ibatis.transaction.TransactionFactory;
 import org.apache.ibatis.type.JdbcType;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
-import xyz.xiezc.mzi.common.DocumentUtil;
-import xyz.xiezc.mzi.common.MziDataSourceFactory;
 
 import javax.sql.DataSource;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.ParserConfigurationException;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
+import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 public class MyXMLConfigBuilder extends BaseBuilder {
 
-
+    @Getter
+    @Setter
+    List<DocumentMapperDefine> documentMapperDefines;
 
     private boolean parsed;
     private final XPathParser parser;
@@ -77,7 +69,7 @@ public class MyXMLConfigBuilder extends BaseBuilder {
         this(new XPathParser(inputStream, true, props, new XMLMapperEntityResolver()), environment, props);
     }
 
-    private MyXMLConfigBuilder(XPathParser parser, String environment, Properties props) {
+    public MyXMLConfigBuilder(XPathParser parser, String environment, Properties props) {
         super(new Configuration());
         ErrorContext.instance().resource("SQL Mapper Configuration");
         this.configuration.setVariables(props);
@@ -85,6 +77,7 @@ public class MyXMLConfigBuilder extends BaseBuilder {
         this.environment = environment;
         this.parser = parser;
     }
+
 
     public Configuration parse() {
         if (parsed) {
@@ -360,6 +353,23 @@ public class MyXMLConfigBuilder extends BaseBuilder {
                     configuration.addMappers(mapperPackage);
                 } else {
                     String resource = child.getStringAttribute("resource");
+                    String s = resource.replaceAll("/", ".");
+                    List<DocumentMapperDefine> collect = documentMapperDefines.stream().filter(m ->
+                            Objects.equals(m.nameSpace, s)
+                    ).collect(Collectors.toList());
+                    if (!collect.isEmpty()) {
+                        DocumentMapperDefine documentMapperDefine = collect.get(0);
+                        XPathParser xPathParser = new XPathParser(documentMapperDefine.getDocument(), true, configuration.getVariables(), new XMLMapperEntityResolver());
+                        MyXMLMapperBuilder mapperParser = new MyXMLMapperBuilder(
+                                xPathParser,
+                                configuration,
+                                resource,
+                                configuration.getSqlFragments()
+                        );
+                        mapperParser.parse();
+                        continue;
+                    }
+
                     String url = child.getStringAttribute("url");
                     String mapperClass = child.getStringAttribute("class");
                     if (resource != null && url == null && mapperClass == null) {

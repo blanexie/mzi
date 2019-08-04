@@ -29,5 +29,8 @@ build/
 
 ### VS Code ###
 .vscode/
-/log/all.log
-/log/error.log
+/log/
+/log/
+app.properties
+
+
